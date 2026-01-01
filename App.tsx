@@ -1,41 +1,21 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, SettlementSummary, TransactionType } from './types';
+import { Transaction, SettlementSummary, TransactionType, CATEGORIES } from './types';
 import TransactionForm from './components/TransactionForm';
 import SummaryCards from './components/SummaryCards';
 import TransactionList from './components/TransactionList';
-import { suggestCategory } from './services/geminiService';
 
 type ViewMode = 'input' | 'dashboard';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>('input');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('family_transactions');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // データの再読み込み（同期の擬似的な挙動）
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    // localStorageから最新の状態を読み直す（他タブでの更新や擬似同期を想定）
-    const saved = localStorage.getItem('family_transactions');
-    if (saved) {
-      setTransactions(JSON.parse(saved));
-    }
-    
-    // URLパラメータのチェックも再度行う
-    processUrlParams();
-
-    // アニメーション用
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 800);
-  };
-
-  const processUrlParams = async () => {
+  const processUrlParams = () => {
     const params = new URLSearchParams(window.location.search);
     const amount = params.get('a');
     const desc = params.get('d');
@@ -47,7 +27,8 @@ const App: React.FC = () => {
         : TransactionType.ME_PAID_FOR_FAMILY;
       
       const description = desc || 'ショートカット入力';
-      const category = await suggestCategory(description);
+      // AIを使わず、デフォルトの「その他」またはシンプルな判定に
+      const category = CATEGORIES[CATEGORIES.length - 1]; 
 
       const newTx: Transaction = {
         id: crypto.randomUUID(),
@@ -131,17 +112,6 @@ const App: React.FC = () => {
         <div>
           <h1 className="text-3xl font-[900] text-slate-900 tracking-tight flex items-center">
             家計の立替メモ
-            {view === 'dashboard' && (
-              <button 
-                onClick={handleRefresh}
-                className={`ml-3 p-1.5 text-slate-400 hover:text-blue-600 transition-all ${isRefreshing ? 'animate-spin text-blue-600' : ''}`}
-                title="同期・更新"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            )}
           </h1>
           <p className="text-sm text-slate-500 font-bold mt-1">
             {view === 'input' 

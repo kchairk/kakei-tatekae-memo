@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, CATEGORIES } from '../types';
-import { suggestCategory } from '../services/geminiService';
 
 interface TransactionFormProps {
   onAdd: (transaction: Omit<Transaction, 'id'>) => void;
@@ -18,9 +17,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 }) => {
   const [amount, setAmount] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [autoCategory, setAutoCategory] = useState<string>(CATEGORIES[CATEGORIES.length - 1]);
+  const [category, setCategory] = useState<string>(CATEGORIES[CATEGORIES.length - 1]);
   const [type, setType] = useState<TransactionType>(TransactionType.ME_PAID_FOR_FAMILY);
-  const [isSuggesting, setIsSuggesting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   // 編集モードの場合の初期値設定
@@ -28,31 +26,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     if (editingTransaction) {
       setAmount(editingTransaction.amount.toString());
       setDescription(editingTransaction.description);
-      setAutoCategory(editingTransaction.category);
+      setCategory(editingTransaction.category);
       setType(editingTransaction.type);
     } else {
       setAmount('');
       setDescription('');
-      setAutoCategory(CATEGORIES[CATEGORIES.length - 1]);
+      setCategory(CATEGORIES[CATEGORIES.length - 1]);
       setType(TransactionType.ME_PAID_FOR_FAMILY);
     }
   }, [editingTransaction]);
-
-  // 内容が入力されたら裏でカテゴリーを推測
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      // 編集中で、かつ内容が元と変わった時だけ再判定
-      if (description.length > 1 && (!editingTransaction || description !== editingTransaction.description)) {
-        setIsSuggesting(true);
-        const suggested = await suggestCategory(description);
-        if (CATEGORIES.includes(suggested)) {
-          setAutoCategory(suggested);
-        }
-        setIsSuggesting(false);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [description, editingTransaction]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +45,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         ...editingTransaction,
         amount: Number(amount),
         description: description || '無題',
-        category: autoCategory,
+        category: category,
         type
       });
     } else {
@@ -71,7 +53,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         date: new Date().toISOString(),
         amount: Number(amount),
         description: description || '無題',
-        category: autoCategory,
+        category: category,
         type
       });
       // 成功フィードバック
@@ -81,7 +63,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       // リセット
       setAmount('');
       setDescription('');
-      setAutoCategory(CATEGORIES[CATEGORIES.length - 1]);
+      setCategory(CATEGORIES[CATEGORIES.length - 1]);
     }
   };
 
@@ -136,15 +118,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
           {/* 内容入力 */}
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-2 flex justify-between">
-              <span>内容</span>
-              <div className="flex items-center space-x-1">
-                {isSuggesting ? (
-                  <span className="text-blue-600 animate-pulse text-[10px]">AI判定中...</span>
-                ) : (
-                  description && <span className="text-slate-400 text-[10px] font-bold">自動分類: {autoCategory}</span>
-                )}
-              </div>
+            <label className="block text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-2">
+              内容
             </label>
             <input
               type="text"
@@ -153,6 +128,29 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               placeholder="何を買いましたか？"
               className="w-full px-5 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-slate-900 text-xl"
             />
+          </div>
+
+          {/* カテゴリー選択 */}
+          <div>
+            <label className="block text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-2">
+              カテゴリー
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategory(cat)}
+                  className={`py-2 text-[10px] font-black rounded-lg border-2 transition-all ${
+                    category === cat
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-100'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* ボタンエリア */}
