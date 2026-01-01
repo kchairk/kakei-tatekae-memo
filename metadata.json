@@ -1,0 +1,7 @@
+{
+  "name": "家計の立替メモ",
+  "description": "家族と個人の立替金をスマートに管理。買い物の瞬間に素早く記録し、AIが家計を分析するアプリです。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
